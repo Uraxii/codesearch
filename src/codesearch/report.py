@@ -107,6 +107,13 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
   .match-context tr.hl td { background:var(--match-hl); }
   .match-context tr.hl .src { font-weight:600; }
 
+  /* Rule meta */
+  .rule-meta { padding:8px 14px 10px; border-bottom:1px solid var(--border);
+    background:var(--bg); font-size:12px; display:flex; flex-direction:column; gap:5px; }
+  .rule-meta-desc { color:var(--text); }
+  .rule-meta-fix { color:var(--muted); }
+  .rule-meta-fix strong { color:var(--text); }
+
   /* Empty state */
   .empty { text-align:center; padding:48px; color:var(--muted); }
   .empty strong { display:block; font-size:16px; margin-bottom:6px; color:var(--text); }
@@ -258,9 +265,10 @@ function renderByRule(results) {
   const groups = groupBy(results, 'capture');
   const keys = Object.keys(groups).sort();
   if (keys.length === 0) { container.innerHTML = ''; return; }
-  container.innerHTML = keys.map(rule =>
-    renderSection(rule, groups[rule], r => matchRow(r, 'file'))
-  ).join('');
+  container.innerHTML = keys.map(rule => {
+    const meta = DATA.rules ? DATA.rules[rule] : null;
+    return renderSection(rule, groups[rule], r => matchRow(r, 'file'), meta);
+  }).join('');
   attachToggleHandlers(container);
 }
 
@@ -275,9 +283,14 @@ function renderByFile(results) {
   attachToggleHandlers(container);
 }
 
-function renderSection(title, results, rowFn) {
+function renderSection(title, results, rowFn, meta) {
   const id = 'sec-' + Math.random().toString(36).slice(2);
   const rows = results.map(rowFn).join('');
+  const metaHtml = (meta && (meta.description || meta.fix)) ? `
+    <div class="rule-meta">
+      ${meta.description ? `<span class="rule-meta-desc">${esc(meta.description)}</span>` : ''}
+      ${meta.fix ? `<span class="rule-meta-fix"><strong>Fix:</strong> ${esc(meta.fix)}</span>` : ''}
+    </div>` : '';
   return `
 <div class="section">
   <div class="section-header" data-target="${id}">
@@ -286,6 +299,7 @@ function renderSection(title, results, rowFn) {
     <span class="badge">${results.length}</span>
   </div>
   <div class="section-body" id="${id}">
+    ${metaHtml}
     ${rows}
   </div>
 </div>`;
