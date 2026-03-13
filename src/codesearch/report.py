@@ -315,7 +315,8 @@ function matchRow(r, labelMode) {
 function renderContext(r) {
   const startLine = r.context_start_line;
   const matchLine = r.line;
-  const lines = [...r.context_before, r.text, ...r.context_after];
+  const matchLineText = r.context_match_line !== undefined ? r.context_match_line : r.text;
+  const lines = [...r.context_before, matchLineText, ...r.context_after];
   const rows = lines.map((line, i) => {
     const ln = startLine + i;
     const isMatch = ln === matchLine;
