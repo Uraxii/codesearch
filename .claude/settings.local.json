@@ -4,7 +4,8 @@
       "Bash(wc -l /home/nicole/git/codesearch/src/codesearch/*.py)",
       "Bash(python -m codesearch --filter-file demo/csharp-security.ini demo/csharp --output html > /tmp/codesearch-report.html 2>&1; echo \"exit: $?\")",
       "Bash(python -m codesearch --filter-file demo/csharp-security.ini demo/csharp --output html > /tmp/codesearch-report.html; echo \"exit: $?\"; wc -l /tmp/codesearch-report.html)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(ls /home/nikki/Git/codesearch/*.py 2>/dev/null || ls /home/nikki/Git/codesearch/src/ 2>/dev/null || ls /home/nikki/Git/codesearch/)"
     ]
   }
 }
