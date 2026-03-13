@@ -354,6 +354,7 @@ def main(argv: list[str] | None = None) -> int:
             after_end = min(len(lines), r.line + ctx_n)     # exclusive
             context_before = lines[before_start:match_idx]
             context_after = lines[match_idx + 1:after_end]
+            context_match_line = lines[match_idx] if match_idx < len(lines) else r.text
             result_dicts.append({
                 "file": str(r.file),
                 "line": r.line,
@@ -364,6 +365,7 @@ def main(argv: list[str] | None = None) -> int:
                 "context_before": context_before,
                 "context_after": context_after,
                 "context_start_line": before_start + 1,     # 1-based
+                "context_match_line": context_match_line,
             })
 
         unique_rules = {r["capture"] for r in result_dicts if r["capture"]}
