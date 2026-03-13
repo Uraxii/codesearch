@@ -360,5 +360,5 @@ init();
 
 def generate_html(data: dict) -> str:
     """Embed scan data into the dashboard HTML template."""
-    json_str = json.dumps(data, ensure_ascii=False)
+    json_str = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     return _HTML_TEMPLATE.replace("__DATA__", json_str)
