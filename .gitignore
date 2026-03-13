@@ -211,3 +211,12 @@ agents/*/memory.md
 agents/*/inbox.md
 core-memory.md
 taskboard.md
+agent-memory.md
+
+# Dotfiles / dot-directories (local tooling, editor settings, etc.)
+.*
+!.gitignore
+
+# Generated output files
+demo/report.html
+*.html.out
