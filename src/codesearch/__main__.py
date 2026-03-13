@@ -370,6 +370,11 @@ def main(argv: list[str] | None = None) -> int:
 
         unique_rules = {r["capture"] for r in result_dicts if r["capture"]}
         unique_files = {r["file"] for r in result_dicts}
+        rules_meta = {
+            fq.name: {"description": fq.description, "fix": fq.fix}
+            for fq in filter_queries
+            if fq.name
+        }
         data = {
             "summary": {
                 "total": len(result_dicts),
@@ -378,6 +383,7 @@ def main(argv: list[str] | None = None) -> int:
                 "paths": [str(p) for p in search_paths],
                 "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
             },
+            "rules": rules_meta,
             "results": result_dicts,
         }
 
