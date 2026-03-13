@@ -41,6 +41,8 @@ class FilterQuery:
     pattern: str
     lang: str | None
     captures: frozenset[str] | None = field(default=None)  # None = all captures
+    description: str = ""
+    fix: str = ""
 
 
 def parse_filter_file(path: Path) -> list[FilterQuery]:
@@ -87,6 +89,8 @@ def parse_filter_file(path: Path) -> list[FilterQuery]:
                 pattern=entry["pattern"],
                 lang=lang,
                 captures=captures,
+                description=entry.get("description", ""),
+                fix=entry.get("fix", ""),
             )
         )
 
