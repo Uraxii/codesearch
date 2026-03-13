@@ -26,8 +26,8 @@ The `codesearch` command is then available via `uv run codesearch`.
 ## Usage
 
 ```
-codesearch [--query | --ast | --regex] [--lang LANG] [--ignore-case] [--files-only] <pattern> [path ...]
-codesearch --filter-file <file> [--filter-file <file> ...] [--lang LANG] [--files-only] [path ...]
+codesearch [--query | --ast | --regex] [--lang LANG] [--ignore-case] [--files-only] [--output FORMAT] [--context N] <pattern> [path ...]
+codesearch --filter-file <file> [--filter-file <file> ...] [--lang LANG] [--files-only] [--output FORMAT] [--context N] [path ...]
 ```
 
 If no path is given, the current directory is searched recursively.
@@ -182,6 +182,8 @@ src/auth.cs:23:12: [insecure-random] Random
 | `--ignore-case`, `-i` | Case-insensitive matching (string search only) |
 | `--lang LANG` | Restrict search to one language (`python`, `javascript`, `typescript`, `c_sharp`) |
 | `--files-only`, `-l` | Print only filenames of matching files |
+| `--output`, `-O` | Output format: `text` (default), `json`, or `html` (self-contained dashboard) |
+| `--context`, `-C` | Lines of context to include around each match in `json`/`html` output (default: 3) |
 
 ## Output format
 
