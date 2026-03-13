@@ -2,6 +2,8 @@
 
 import json
 
+from pygments.formatters import HtmlFormatter
+
 _HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -104,6 +106,7 @@ _HTML_TEMPLATE = """<!DOCTYPE html>
   .match-context .ln { padding:1px 12px; color:var(--muted); text-align:right;
     user-select:none; border-right:1px solid var(--border); min-width:44px; }
   .match-context .src { padding:1px 12px; }
+__PYGMENTS_CSS__
   .match-context tr.hl td { background:var(--match-hl); }
   .match-context tr.hl .src { font-weight:600; }
 
@@ -334,7 +337,7 @@ function renderContext(r) {
   const rows = lines.map((line, i) => {
     const ln = startLine + i;
     const isMatch = ln === matchLine;
-    return `<tr${isMatch ? ' class="hl"' : ''}><td class="ln">${ln}</td><td class="src">${esc(line)}</td></tr>`;
+    return `<tr${isMatch ? ' class="hl"' : ''}><td class="ln">${ln}</td><td class="src">${line}</td></tr>`;
   }).join('');
   return `<table>${rows}</table>`;
 }
@@ -376,4 +379,9 @@ init();
 def generate_html(data: dict) -> str:
     """Embed scan data into the dashboard HTML template."""
     json_str = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
-    return _HTML_TEMPLATE.replace("__DATA__", json_str)
+    pygments_css = HtmlFormatter(style="default").get_style_defs(".src")
+    return (
+        _HTML_TEMPLATE
+        .replace("__DATA__", json_str)
+        .replace("__PYGMENTS_CSS__", pygments_css)
+    )

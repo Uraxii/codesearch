@@ -17,6 +17,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from pygments import highlight
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import TextLexer, get_lexer_for_filename
+from pygments.util import ClassNotFound
+
 from .ast_search import search_ast
 from .filter_file import FilterQuery, parse_filter_file
 from .languages import should_process
@@ -297,6 +302,8 @@ def main(argv: list[str] | None = None) -> int:
     exit_code = 0
     # Cache file lines for context in json/html output modes.
     file_lines_cache: dict[Path, list[str]] = {}
+    file_highlighted_cache: dict[Path, list[str]] = {}
+    _hl_formatter = HtmlFormatter(nowrap=True)
 
     for file_path, language in _iter_files(search_paths, iter_lang_hint):
         try:
@@ -306,9 +313,19 @@ def main(argv: list[str] | None = None) -> int:
             continue
 
         if args.output in ("json", "html"):
-            file_lines_cache[file_path] = (
-                source_bytes.decode("utf-8", errors="replace").splitlines()
-            )
+            decoded = source_bytes.decode("utf-8", errors="replace")
+            file_lines_cache[file_path] = decoded.splitlines()
+
+        if args.output == "html":
+            try:
+                lexer = get_lexer_for_filename(str(file_path), stripall=False)
+            except ClassNotFound:
+                lexer = TextLexer()
+            hl = highlight(decoded, lexer, _hl_formatter)
+            hl_lines = hl.split("\n")
+            if hl_lines and hl_lines[-1] == "":
+                hl_lines.pop()
+            file_highlighted_cache[file_path] = hl_lines
 
         for fq in filter_queries:
             try:
@@ -349,12 +366,13 @@ def main(argv: list[str] | None = None) -> int:
         result_dicts = []
         for r in results:
             lines = file_lines_cache.get(r.file, [])
+            ctx_lines = file_highlighted_cache.get(r.file, lines) if args.output == "html" else lines
             before_start = max(0, r.line - 1 - ctx_n)      # 0-based
             match_idx = r.line - 1                           # 0-based
             after_end = min(len(lines), r.line + ctx_n)     # exclusive
-            context_before = lines[before_start:match_idx]
-            context_after = lines[match_idx + 1:after_end]
-            context_match_line = lines[match_idx] if match_idx < len(lines) else r.text
+            context_before = ctx_lines[before_start:match_idx]
+            context_after = ctx_lines[match_idx + 1:after_end]
+            context_match_line = ctx_lines[match_idx] if match_idx < len(ctx_lines) else r.text
             result_dicts.append({
                 "file": str(r.file),
                 "line": r.line,
