@@ -12,7 +12,9 @@ Usage:
 """
 
 import argparse
+import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from .ast_search import search_ast
@@ -20,6 +22,7 @@ from .filter_file import FilterQuery, parse_filter_file
 from .languages import should_process
 from .models import ParseWarning, SearchResult
 from .query_dsl import _LANG_ALIASES, compile_query, parse_query, rename_captures
+from .report import generate_html
 from .string_search import search_string
 
 
@@ -204,6 +207,19 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print only filenames of files with matches",
     )
+    parser.add_argument(
+        "--output", "-O",
+        choices=["text", "json", "html"],
+        default="text",
+        help="Output format: text (default), json, or html (self-contained dashboard)",
+    )
+    parser.add_argument(
+        "--context", "-C",
+        type=int,
+        default=3,
+        metavar="N",
+        help="Lines of context shown in json/html output (default: 3)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -279,6 +295,8 @@ def main(argv: list[str] | None = None) -> int:
     results: list[SearchResult] = []
     warnings: list[ParseWarning] = []
     exit_code = 0
+    # Cache file lines for context in json/html output modes.
+    file_lines_cache: dict[Path, list[str]] = {}
 
     for file_path, language in _iter_files(search_paths, iter_lang_hint):
         try:
@@ -286,6 +304,11 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as e:
             print(f"warning: cannot read {file_path}: {e}", file=sys.stderr)
             continue
+
+        if args.output in ("json", "html"):
+            file_lines_cache[file_path] = (
+                source_bytes.decode("utf-8", errors="replace").splitlines()
+            )
 
         for fq in filter_queries:
             try:
@@ -321,16 +344,57 @@ def main(argv: list[str] | None = None) -> int:
     for warning in warnings:
         print(f"warning: {warning.file}: {warning.message}", file=sys.stderr)
 
-    # Emit results to stdout
-    seen_files: set[Path] = set()
-    if args.files_only:
-        for result in results:
-            if result.file not in seen_files:
-                seen_files.add(result.file)
-                print(str(result.file))
+    if args.output in ("json", "html"):
+        ctx_n = args.context
+        result_dicts = []
+        for r in results:
+            lines = file_lines_cache.get(r.file, [])
+            before_start = max(0, r.line - 1 - ctx_n)      # 0-based
+            match_idx = r.line - 1                           # 0-based
+            after_end = min(len(lines), r.line + ctx_n)     # exclusive
+            context_before = lines[before_start:match_idx]
+            context_after = lines[match_idx + 1:after_end]
+            result_dicts.append({
+                "file": str(r.file),
+                "line": r.line,
+                "col": r.col,
+                "text": r.text,
+                "match_type": r.match_type,
+                "capture": r.capture,
+                "context_before": context_before,
+                "context_after": context_after,
+                "context_start_line": before_start + 1,     # 1-based
+            })
+
+        unique_rules = {r["capture"] for r in result_dicts if r["capture"]}
+        unique_files = {r["file"] for r in result_dicts}
+        data = {
+            "summary": {
+                "total": len(result_dicts),
+                "files": len(unique_files),
+                "rules": len(unique_rules),
+                "paths": [str(p) for p in search_paths],
+                "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            },
+            "results": result_dicts,
+        }
+
+        if args.output == "json":
+            print(json.dumps(data, indent=2))
+        else:
+            print(generate_html(data))
+
     else:
-        for result in results:
-            print(_format_result(result, files_only=False))
+        # Text output (default)
+        seen_files: set[Path] = set()
+        if args.files_only:
+            for result in results:
+                if result.file not in seen_files:
+                    seen_files.add(result.file)
+                    print(str(result.file))
+        else:
+            for result in results:
+                print(_format_result(result, files_only=False))
 
     if not results:
         exit_code = 1

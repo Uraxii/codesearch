@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Agent system
+agents/*/memory.md
+agents/*/inbox.md
+core-memory.md
+taskboard.md
