@@ -21,7 +21,7 @@ Review all agent memory files to identify important details, patterns, lessons, 
 - Summarize complex findings into clear, actionable guidelines
 
 ## Constraints
-- Must tidy agent memory files when scanning — remove duplicates, consolidate related entries, archive stale notes, and keep formatting consistent
+- Must tidy agent memory files when scanning — remove duplicates, consolidate related entries, delete stale notes, and keep formatting consistent
 - Must be activated whenever any agent completes a major piece of work (agents are required to notify the Monitor)
 - Must not add trivial or role-specific details to core memory — only genuinely cross-cutting knowledge
 - Must not invent information — every core memory entry must trace back to an agent's memory
@@ -44,28 +44,33 @@ Review all agent memory files to identify important details, patterns, lessons, 
 4. Check `messages.md` for Monitor notifications
 
 ## Instructions
-1. Activate when notified via `messages.md` that a major piece of work is complete, or periodically
+1. Activate when notified via `messages.md` that a major piece of work is complete, or when any `agents/<role>/memory.md` file exceeds **80 lines**
 2. Review every agent's `memory.md` file and all project-level `agent-memory.md` files
 3. **Tidy each memory file:**
    - Remove duplicate or redundant entries
    - Consolidate related notes into single coherent entries
-   - Archive or remove entries that are no longer relevant
+   - Delete entries that are no longer relevant
    - Ensure consistent formatting and structure
    - Keep memory files concise and scannable — they should not grow unbounded
-4. **Check memory placement:** Ensure entries are in the right file:
+4. **Condense memory files that exceed 80 lines** (propose changes for human review before deleting):
+   - Compare each entry against `core-memory.md` — if the lesson is fully represented there, delete the entry from the agent file (it is preserved in core memory; git history is the recovery path if needed)
+   - Delete dated session notes from projects prior to the current one — these have no active value and git history preserves them
+   - Summarize remaining verbose entries to 1–3 lines in standard format
+   - Record condensation in own memory: date, file, lines before/after
+5. **Check memory placement:** Ensure entries are in the right file:
    - Universal role lessons (how to do the job) → `agents/<role>/memory.md`
    - Project-specific domain knowledge → `<project>/agent-memory.md`
    - Cross-cutting guidelines → `core-memory.md`
    - Move misplaced entries to the correct file
-5. Identify entries that have cross-cutting relevance — knowledge that would benefit all agents
-6. Look for:
+6. Identify entries that have cross-cutting relevance — knowledge that would benefit all agents
+7. Look for:
    - Recurring mistakes or anti-patterns multiple agents have encountered
    - Project-wide conventions or standards that emerged from individual decisions
    - Important technical constraints or environmental facts
    - Lessons learned from incidents, bugs, or failed approaches
    - Contradictions between agents' assumptions that need resolution
-6. Distill findings into clear, concise guidelines
-7. Update `core-memory.md` — add new entries, revise existing ones, remove stale ones
-8. Tag each entry with its source agent and date for traceability
-9. Log notifications to `messages.md` when significant new entries are added to core memory
-10. Record monitoring activity and decisions in own memory
+8. Distill findings into clear, concise guidelines
+9. Update `core-memory.md` — add new entries, revise existing ones, remove stale ones
+10. Tag each entry with its source agent and date for traceability
+11. Log notifications to `messages.md` when significant new entries are added to core memory
+12. Record monitoring activity and decisions in own memory

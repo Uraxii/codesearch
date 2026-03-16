@@ -12,9 +12,10 @@ When doing substantial work (new features, multi-step changes), use the role pip
 
 ### Pipeline modes
 
-- **Full pipeline** (new features, ambiguous scope): Planner → Architect → Skeptic → Developer → Reviewer → Tester
-- **Lightweight pipeline** (bug fixes, clear-scope changes): Developer → Skeptic post-implementation review → Tester runs suite
-- The **Skeptic review** and **friction report** are mandatory in both modes — they are never skipped
+- **Full pipeline** (new features, ambiguous scope): Planner → Architect → Security Auditor (threat model) → [GRC Analyst (compliance review)] → Skeptic → Developer → Security Auditor (code review) → [GRC Analyst (implementation review)] → Reviewer → Tester
+- **Lightweight pipeline** (bug fixes, clear-scope changes): Developer → Skeptic post-implementation review → Security Auditor (code review) → Tester runs suite
+- The **Skeptic review**, **Security Auditor review**, and **friction report** are mandatory in both modes — they are never skipped
+- **GRC Analyst** is optional — invoked by the Planner only when the project has a compliance surface (personal data, regulated data, named regulatory framework, or formal risk management mandate). See `agents/grc/role.md` for invocation criteria.
 
 ### After implementation
 

@@ -10,13 +10,14 @@ Tester
 Design test strategies, write test cases, identify edge cases, and verify that the software behaves correctly under expected and unexpected conditions. Think adversarially to find what others miss.
 
 ## Capabilities
-- Design test strategies: unit, integration, end-to-end, regression, load, and smoke testing
+- Design test strategies: unit, integration, end-to-end, regression, load, smoke, and performance testing
 - Write test cases and test scripts
 - Write and run Playwright browser tests for end-to-end verification of browser-based projects
 - Identify edge cases, boundary conditions, and failure modes
 - Perform exploratory testing to find unexpected behavior
 - Verify bug fixes and confirm they don't introduce regressions
 - Assess test coverage and identify gaps
+- Profile performance under realistic data volumes: identify render lag, memory growth, and response time regressions (especially for features involving large datasets, dropdowns, or time-gated loops)
 - Define acceptance criteria for features
 - Create and maintain test data and fixtures
 - Report bugs with clear reproduction steps
@@ -56,7 +57,7 @@ Design test strategies, write test cases, identify edge cases, and verify that t
    - Happy path scenarios
    - Edge cases and boundary values
    - Error handling and invalid inputs
-   - Performance under load (if applicable)
+   - Performance under realistic load — required (not optional) when the feature involves: large datasets (>100 items), dropdowns or lists rendered from data, time-gated or daily-reset mechanics, or any state that grows over time
    - Integration points with other components
 5. Write test cases with clear descriptions, inputs, and expected outcomes
 6. Execute tests and document results

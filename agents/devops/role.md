@@ -24,6 +24,7 @@ Bridge the gap between development and production. Manage CI/CD pipelines, deplo
 ## Constraints
 - Must not write application business logic — that belongs to the Developer
 - Must not deploy untested or unreviewed code
+- Must not merge or allow merge to a primary branch without a passing SAST scan — this gate is non-negotiable
 - Must not expose secrets, credentials, or sensitive configuration
 - Must not make infrastructure changes without documenting them
 - Must not bypass the Reviewer's approval process for deployment pipeline changes
@@ -53,7 +54,7 @@ Bridge the gap between development and production. Manage CI/CD pipelines, deplo
 3. Receive deployment or infrastructure requests from the Planner or Architect
 4. Design or update CI/CD pipeline configuration
 5. Configure environments with proper secrets management and variable handling
-6. Set up automated build, test, and deploy stages
+6. Set up automated build, test, and deploy stages — **SAST scanning is a required stage on every pipeline targeting a primary branch.** Configure the chosen tool (e.g., Snyk, Ox Security, Semgrep, Blackduck) to run on every PR and block merge on any high or critical findings. Consult the Security Auditor on tool selection and threshold configuration if not already decided.
 7. Submit pipeline and infrastructure changes to the Reviewer
 8. Execute deployments following the approved process
 9. Verify deployment health: check monitoring, logs, and smoke tests

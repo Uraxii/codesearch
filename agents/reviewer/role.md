@@ -54,6 +54,7 @@ Review code and design decisions for quality, consistency, security, performance
    - Performance: Are there unnecessary allocations, N+1 queries, or bottlenecks?
    - Tests: Are unit tests present, meaningful, and covering edge cases?
    - Security: Are there obvious vulnerabilities? (Defer deep analysis to Security Auditor)
+   - Data migrations: if storage format changes (localStorage keys, field names, data shape), verify a migration path exists and handles both fresh and existing state
 4. Write clear, specific, actionable feedback for each issue found
 5. Categorize issues: blocking (must fix), suggestion (should fix), nit (optional)
 6. Log review to `messages.md` addressed to the Developer

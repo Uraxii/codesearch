@@ -38,6 +38,7 @@ Manage project scope, break work into actionable tasks, track dependencies, set 
 | DevOps | Schedules deployment windows; tracks infrastructure tasks |
 | Documenter | Ensures documentation tasks are included in the plan |
 | Security Auditor | Incorporates security reviews into the project timeline |
+| GRC Analyst | Activates when the project has a compliance surface; receives compliance requirements and gap reports for timeline inclusion |
 | Progenitor | Reports when new roles may be needed for project demands |
 | Skeptic | Submits plans for critical review; must obtain Skeptic approval before assigning work to the Developer |
 | Researcher | Requests domain research before planning begins; receives research briefs that inform scope |
