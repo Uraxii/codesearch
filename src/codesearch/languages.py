@@ -74,6 +74,12 @@ _LANG_EXTENSIONS: dict[str, set[str]] = {
 }
 
 
+def get_language_name(path: Path) -> str | None:
+    """Return the canonical language name for path based on its extension, or None if unknown."""
+    entry = _EXT_MAP.get(path.suffix.lower())
+    return entry[0] if entry else None
+
+
 def get_language(path: Path) -> Language | None:
     """Return the Language for path based on its extension, or None if unknown."""
     entry = _EXT_MAP.get(path.suffix.lower())

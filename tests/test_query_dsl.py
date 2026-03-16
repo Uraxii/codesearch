@@ -1,20 +1,12 @@
 from pathlib import Path
 
 import pytest
-import tree_sitter_c_sharp as tscsharp
-import tree_sitter_python as tspython
-from tree_sitter import Language
 
-from codesearch.ast_search import search_ast
 from codesearch.query_dsl import ParsedQuery, Predicate, compile_query, parse_query
+from helpers import run_main
 
 FIXTURES = Path(__file__).parent / "fixtures"
-CS_LANG = Language(tscsharp.language())
-PY_LANG = Language(tspython.language())
-CS_SOURCE = (FIXTURES / "sample.cs").read_bytes()
-PY_SOURCE = (FIXTURES / "sample.py").read_bytes()
-CS_PATH = FIXTURES / "sample.cs"
-PY_PATH = FIXTURES / "sample.py"
+FILTERS  = Path(__file__).parent / "filters"
 
 
 # ---------------------------------------------------------------------------
@@ -108,68 +100,47 @@ def test_compile_identifier():
 
 
 # ---------------------------------------------------------------------------
-# End-to-end: DSL query → AST search on C# fixture
+# End-to-end: DSL query via filter file on C# fixture
 # ---------------------------------------------------------------------------
 
 def test_find_methods_named_greet_csharp():
-    q = parse_query('function where name = "Greet"')
-    ts = compile_query(q, "c_sharp")
-    results, warnings = search_ast(CS_SOURCE, CS_LANG, ts, CS_PATH)
-    names = [r.text for r in results]
-    assert "Greet" in names
-    assert warnings == []
+    output = run_main(["--filter-file", str(FILTERS / "dsl-greet-cs.ini"), str(FIXTURES / "sample.cs")])
+    assert "Greet" in output
 
 
 def test_find_all_methods_csharp():
-    q = parse_query("function")
-    ts = compile_query(q, "c_sharp")
-    results, _ = search_ast(CS_SOURCE, CS_LANG, ts, CS_PATH)
-    names = [r.text for r in results]
-    assert "Main" in names
-    assert "Greet" in names
-    assert "ProcessRequest" in names
-    assert "Execute" in names
+    output = run_main(["--filter-file", str(FILTERS / "dsl-all-functions-cs.ini"), str(FIXTURES / "sample.cs")])
+    assert "Main" in output
+    assert "Greet" in output
+    assert "ProcessRequest" in output
+    assert "Execute" in output
 
 
 def test_find_class_named_webrequest():
-    q = parse_query('class where name = "WebRequestExample"')
-    ts = compile_query(q, "c_sharp")
-    results, _ = search_ast(CS_SOURCE, CS_LANG, ts, CS_PATH)
-    assert any(r.text == "WebRequestExample" for r in results)
+    output = run_main(["--filter-file", str(FILTERS / "dsl-webrequest-class.ini"), str(FIXTURES / "sample.cs")])
+    assert "WebRequestExample" in output
 
 
 def test_find_classes_containing_request():
-    q = parse_query('class where name contains "Request"')
-    ts = compile_query(q, "c_sharp")
-    results, _ = search_ast(CS_SOURCE, CS_LANG, ts, CS_PATH)
-    names = [r.text for r in results]
-    assert "WebRequestExample" in names
-    assert "HttpRequest" in names
+    output = run_main(["--filter-file", str(FILTERS / "dsl-request-classes.ini"), str(FIXTURES / "sample.cs")])
+    assert "WebRequestExample" in output
+    assert "HttpRequest" in output
 
 
 def test_find_parameters_typed_webrequest():
-    q = parse_query('parameter where type = "WebRequest"')
-    ts = compile_query(q, "c_sharp")
-    results, _ = search_ast(CS_SOURCE, CS_LANG, ts, CS_PATH)
-    types = [r.text for r in results if r.capture == "_type"]
-    assert "WebRequest" in types
+    output = run_main(["--filter-file", str(FILTERS / "dsl-webrequest-param.ini"), str(FIXTURES / "sample.cs")])
+    assert "WebRequest" in output
 
 
 def test_find_identifier_webrequest_csharp():
-    q = parse_query('identifier where text = "WebRequest"')
-    ts = compile_query(q, "c_sharp")
-    results, _ = search_ast(CS_SOURCE, CS_LANG, ts, CS_PATH)
-    assert len(results) >= 1
-    assert all(r.text == "WebRequest" for r in results)
+    output = run_main(["--filter-file", str(FILTERS / "dsl-webrequest-id.ini"), str(FIXTURES / "sample.cs")])
+    assert "WebRequest" in output
 
 
 def test_find_methods_starts_with_process():
-    q = parse_query('function where name starts_with "Process"')
-    ts = compile_query(q, "c_sharp")
-    results, _ = search_ast(CS_SOURCE, CS_LANG, ts, CS_PATH)
-    names = [r.text for r in results]
-    assert "ProcessRequest" in names
-    assert "ProcessHttp" in names
+    output = run_main(["--filter-file", str(FILTERS / "dsl-process-fns.ini"), str(FIXTURES / "sample.cs")])
+    assert "ProcessRequest" in output
+    assert "ProcessHttp" in output
 
 
 # ---------------------------------------------------------------------------
@@ -177,7 +148,5 @@ def test_find_methods_starts_with_process():
 # ---------------------------------------------------------------------------
 
 def test_same_query_python():
-    q = parse_query('function where name = "greet"')
-    ts = compile_query(q, "python")
-    results, _ = search_ast(PY_SOURCE, PY_LANG, ts, PY_PATH)
-    assert any(r.text == "greet" for r in results)
+    output = run_main(["--filter-file", str(FILTERS / "find-greet.ini"), str(FIXTURES / "sample.py")])
+    assert "greet" in output

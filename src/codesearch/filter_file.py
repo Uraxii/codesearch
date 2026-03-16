@@ -7,10 +7,12 @@ query name rather than the internal capture name.
 File format (INI / configparser)::
 
     [query-name]
-    type     = query | regex | ast | string
-    pattern  = <pattern or DSL expression>
-    lang     = c_sharp          # optional — restrict to one language
-    captures = _param, _name   # optional — ast only; which captures to output
+    type          = query | regex | ast | string
+    pattern       = <pattern or DSL expression>
+    lang          = c_sharp          # optional — restrict to one language
+    captures      = _param, _name   # optional — ast only; which captures to output
+    exclude       = mock|fake        # optional — drop results whose text matches (case-insensitive regex)
+    exclude_files = test|mock        # optional — skip files whose path matches (case-insensitive regex)
 
     [another-query]
     type    = regex
@@ -23,15 +25,20 @@ comma-separated list of tree-sitter capture names (without the ``@`` sigil).
 When set, only captures whose names appear in this list are included in the
 output; other captures are used purely as filters inside the query predicate
 and suppressed from results.  When omitted, all captures are output.
+``exclude`` and ``exclude_files`` are matched case-insensitively.  For string
+and regex match types, ``exclude`` is tested against the full matched line.
+For query and ast types it is tested against the captured node text.
 """
 
 from __future__ import annotations
 
 import configparser
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 _VALID_TYPES = frozenset({"query", "regex", "ast", "string"})
+_VALID_SEVERITIES = frozenset({"critical", "high", "medium", "low", "info"})
 
 
 @dataclass
@@ -43,6 +50,9 @@ class FilterQuery:
     captures: frozenset[str] | None = field(default=None)  # None = all captures
     description: str = ""
     fix: str = ""
+    severity: str = "medium"  # critical | high | medium | low | info
+    exclude: str = ""        # regex (case-insensitive): drop results whose matched text matches
+    exclude_files: str = ""  # regex (case-insensitive): skip files whose path matches
 
 
 def parse_filter_file(path: Path) -> list[FilterQuery]:
@@ -82,6 +92,25 @@ def parse_filter_file(path: Path) -> list[FilterQuery]:
         if raw_captures := entry.get("captures"):
             captures = frozenset(c.strip() for c in raw_captures.split(",") if c.strip())
 
+        severity = entry.get("severity", "medium").lower()
+        if severity not in _VALID_SEVERITIES:
+            raise ValueError(
+                f"Filter file {path}: [{section}] has invalid severity {severity!r}. "
+                f"Valid values: {', '.join(sorted(_VALID_SEVERITIES))}"
+            )
+
+        exclude       = entry.get("exclude", "")
+        exclude_files = entry.get("exclude_files", "")
+
+        for field_name, value in (("exclude", exclude), ("exclude_files", exclude_files)):
+            if value:
+                try:
+                    re.compile(value, re.IGNORECASE)
+                except re.error as e:
+                    raise ValueError(
+                        f"Filter file {path}: [{section}] invalid {field_name} pattern: {e}"
+                    ) from e
+
         queries.append(
             FilterQuery(
                 name=section,
@@ -91,6 +120,9 @@ def parse_filter_file(path: Path) -> list[FilterQuery]:
                 captures=captures,
                 description=entry.get("description", ""),
                 fix=entry.get("fix", ""),
+                severity=severity,
+                exclude=exclude,
+                exclude_files=exclude_files,
             )
         )
 

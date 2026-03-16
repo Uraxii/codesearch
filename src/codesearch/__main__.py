@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -24,18 +25,11 @@ from pygments.util import ClassNotFound
 
 from .ast_search import search_ast
 from .filter_file import FilterQuery, parse_filter_file
-from .languages import should_process
+from .languages import get_language_name, should_process
 from .models import ParseWarning, SearchResult
 from .query_dsl import _LANG_ALIASES, compile_query, parse_query, rename_captures
 from .report import generate_html
 from .string_search import search_string
-
-
-def _lang_name(path: Path) -> str | None:
-    """Return the language key for a file, matching _SCHEMA keys."""
-    from .languages import _EXT_MAP
-    entry = _EXT_MAP.get(path.suffix.lower())
-    return entry[0] if entry else None
 
 
 def _lang_matches(file_lang: str | None, query_lang: str) -> bool:
@@ -74,7 +68,8 @@ def _format_result(result: SearchResult, files_only: bool) -> str:
         return str(result.file)
     prefix = f"{result.file}:{result.line}:{result.col}"
     if result.capture:
-        return f"{prefix}: [{result.capture}] {result.text}"
+        label = f"{result.capture}/{result.severity}" if result.severity else result.capture
+        return f"{prefix}: [{label}] {result.text}"
     return f"{prefix}: {result.text}"
 
 
@@ -84,14 +79,22 @@ def _search_file_with_query(
     source_bytes: bytes,
     language,
     ignore_case: bool,
+    compiled_query_cache: dict[tuple[str, str], str | None] | None = None,
 ) -> tuple[list[SearchResult], list[ParseWarning]]:
     """Run a single FilterQuery against one file, returning (results, warnings).
 
     Returns empty lists if the query does not apply to this file's language.
+
+    compiled_query_cache: maps (fq.name, lang_key) -> compiled S-expression string or None.
+        When provided, DSL compile results are read from and written to this cache.
     """
+    # Per-query file exclusion — skip this file entirely for this rule
+    if fq.exclude_files and re.search(fq.exclude_files, str(file_path), re.IGNORECASE):
+        return [], []
+
     # Per-query language filter
     if fq.lang is not None:
-        file_lang = _lang_name(file_path)
+        file_lang = get_language_name(file_path)
         if not _lang_matches(file_lang, fq.lang):
             return [], []
 
@@ -101,14 +104,20 @@ def _search_file_with_query(
     if fq.type == "query":
         if language is None:
             return [], []
-        lang_key = _lang_name(file_path)
+        lang_key = get_language_name(file_path)
         if lang_key is None:
             return [], []
-        try:
-            parsed_dsl = parse_query(fq.pattern)
-        except ValueError as e:
-            raise ValueError(f"Query [{fq.name}]: {e}") from e
-        ast_query = compile_query(parsed_dsl, lang_key)
+        cache_key = (fq.name, lang_key)
+        if compiled_query_cache is not None and cache_key in compiled_query_cache:
+            ast_query = compiled_query_cache[cache_key]
+        else:
+            try:
+                parsed_dsl = parse_query(fq.pattern)
+            except ValueError as e:
+                raise ValueError(f"Query [{fq.name}]: {e}") from e
+            ast_query = compile_query(parsed_dsl, lang_key)
+            if compiled_query_cache is not None:
+                compiled_query_cache[cache_key] = ast_query
         if not ast_query:
             return [], []
         file_results, file_warnings = search_ast(
@@ -116,6 +125,7 @@ def _search_file_with_query(
         )
         for r in file_results:
             r.capture = fq.name
+            r.severity = fq.severity
         results.extend(file_results)
         warnings.extend(file_warnings)
 
@@ -129,6 +139,7 @@ def _search_file_with_query(
             file_results = [r for r in file_results if r.capture in fq.captures]
         for r in file_results:
             r.capture = fq.name
+            r.severity = fq.severity
         results.extend(file_results)
         warnings.extend(file_warnings)
 
@@ -146,7 +157,12 @@ def _search_file_with_query(
         )
         for r in file_results:
             r.capture = fq.name
+            r.severity = fq.severity
         results.extend(file_results)
+
+    # Per-query result exclusion — drop results whose matched text matches
+    if fq.exclude:
+        results = [r for r in results if not re.search(fq.exclude, r.text, re.IGNORECASE)]
 
     return results, warnings
 
@@ -283,6 +299,9 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     # Pre-validate DSL queries up front so errors surface immediately.
+    # The compiled_query_cache is populated lazily on first hit per (fq.name, lang_key);
+    # subsequent files with the same language reuse the compiled S-expression.
+    _compiled_query_cache: dict[tuple[str, str], str | None] = {}
     for fq in filter_queries:
         if fq.type == "query":
             try:
@@ -292,11 +311,6 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"error: {label}{e}", file=sys.stderr)
                 return 2
 
-    # When using filter files, iterate all recognised files (the global --lang
-    # still acts as an additional top-level filter). Per-query lang restrictions
-    # are applied inside _search_file_with_query.
-    iter_lang_hint = lang_hint if using_filter else lang_hint
-
     results: list[SearchResult] = []
     warnings: list[ParseWarning] = []
     exit_code = 0
@@ -305,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
     file_highlighted_cache: dict[Path, list[str]] = {}
     _hl_formatter = HtmlFormatter(nowrap=True)
 
-    for file_path, language in _iter_files(search_paths, iter_lang_hint):
+    for file_path, language in _iter_files(search_paths, lang_hint):
         try:
             source_bytes = file_path.read_bytes()
         except OSError as e:
@@ -330,7 +344,8 @@ def main(argv: list[str] | None = None) -> int:
         for fq in filter_queries:
             try:
                 file_results, file_warnings = _search_file_with_query(
-                    fq, file_path, source_bytes, language, args.ignore_case
+                    fq, file_path, source_bytes, language, args.ignore_case,
+                    _compiled_query_cache,
                 )
             except ValueError as e:
                 print(f"error: {e}", file=sys.stderr)
@@ -380,6 +395,7 @@ def main(argv: list[str] | None = None) -> int:
                 "text": r.text,
                 "match_type": r.match_type,
                 "capture": r.capture,
+                "severity": r.severity,
                 "context_before": context_before,
                 "context_after": context_after,
                 "context_start_line": before_start + 1,     # 1-based
@@ -389,7 +405,7 @@ def main(argv: list[str] | None = None) -> int:
         unique_rules = {r["capture"] for r in result_dicts if r["capture"]}
         unique_files = {r["file"] for r in result_dicts}
         rules_meta = {
-            fq.name: {"description": fq.description, "fix": fq.fix}
+            fq.name: {"description": fq.description, "fix": fq.fix, "severity": fq.severity}
             for fq in filter_queries
             if fq.name
         }
